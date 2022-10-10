@@ -12,8 +12,15 @@ def image_patches(image, patch_size=(16,16)):
     #        patch_size: a scalar tuple M, N 
     # Output- results: a list of images of size M x N
 
-    # TODO: Use slicing to complete the function
+    h,w = image.shape
     output = []
+    for i in range( 0, h, patch_size[0]):
+        for j in range( 0, w, patch_size[1]):
+            # split up a patch
+            patch = image[ i : i + patch_size[0], j : j + patch_size[1]]
+            # normalize each patch
+            norm = (patch - patch.mean()) / patch.var()
+            output.append(patch)
 
     return output
 
