@@ -1,7 +1,9 @@
 import numpy as np
 import os
 from common import *
-
+import math
+from math import cos
+from cmath import sin
 
 ## Image Patches ##
 def image_patches(image, patch_size=(16,16)):
@@ -11,17 +13,17 @@ def image_patches(image, patch_size=(16,16)):
     # Input- image: H x W
     #        patch_size: a scalar tuple M, N 
     # Output- results: a list of images of size M x N
-
+    
     h,w = image.shape
     output = []
-    for i in range( 0, h, patch_size[0]):
-        for j in range( 0, w, patch_size[1]):
+    for j in range( 0, h, patch_size[0]):
+        for i in range( 0, w, patch_size[1]):
             # split up a patch
-            patch = image[ i : i + patch_size[0], j : j + patch_size[1]]
+            patch = image[ j : j + patch_size[0], i : i + patch_size[1]]
             # normalize each patch
             norm = (patch - patch.mean()) / patch.var()
             output.append(patch)
-
+            
     return output
 
 
@@ -33,6 +35,25 @@ def convolve(image, kernel):
     #        kernel: h x w
     # Output- convolve: H x W
 
+    # Get number of rows and columns
+    row, col = image.shape
+
+    #kernel radius
+    #kernel radius is the same as pad width
+    k_radius = np.max(kernel.shape) // 2
+
+    output = np.zeros(image.shape)
+
+    # Make a copy and pad the edges
+    padded = np.pad(image, k_radius, 'edge')
+
+    # Traverse the image, ignoring the padded edges
+    for y in range(k_radius, row + k_radius):
+        for x in range(k_radius, col + k_radius):
+            # Grab window
+            window = padded[y - k_radius : y + k_radius + 1, x - k_radius : x + k_radius + 1]
+            #convolve the window
+            output[y - k_radius, x - k_radius] = (kernel * window).sum()
     return output
 
 
@@ -42,15 +63,19 @@ def edge_detection(image):
     # Input- image: H x W
     # Output- grad_magnitude: H x W
 
-    # TODO: Fix kx, ky
-    kx = None  # 1 x 3
-    ky = None  # 3 x 1
+    kx = np.array([
+        [-1/2, 0, 1/2],
+    ])  
+    ky = np.array([
+        [-1/2], 
+        [0], 
+        [1/2]
+    ])  
 
     Ix = convolve(image, kx)
     Iy = convolve(image, ky)
 
-    # TODO: Use Ix, Iy to calculate grad_magnitude
-    grad_magnitude = None
+    grad_magnitude = np.sqrt((Ix ** 2) + (Iy ** 2))
 
     return grad_magnitude, Ix, Iy
 
@@ -61,8 +86,19 @@ def sobel_operator(image):
     # Input- image: H x W
     # Output- Gx, Gy, grad_magnitude: H x W
 
-    # TODO: Use convolve() to complete the function
-    Gx, Gy, grad_magnitude = None, None, None
+    sobelX = np.array([
+        [1, 0, -1],
+        [2, 0, -2],
+        [1, 0, -1]
+    ])
+    sobelY = np.array([
+        [1, 2, 1],
+        [0, 0, 0],
+        [-1, -2, -1]
+    ])
+
+    Gx, Gy = convolve(image, sobelX), convolve(image, sobelY)
+    grad_magnitude = np.sqrt((Gx**2) + (Gy**2))
 
     return Gx, Gy, grad_magnitude
 
@@ -73,15 +109,16 @@ def steerable_filter(image, angles=[0, np.pi/6, np.pi/3, np.pi/2, np.pi*2/3, np.
     # Input- image: H x W
     #        angels: a list of scalars
     # Output- results: a list of images of H x W
-    # You are encouraged not to use sobel_operator() in this function.
 
-    # TODO: Use convolve() to complete the function
     output = []
-
+    for a in angles:
+        steerable_kernel = np.array([
+            [cos(a) + sin(a), 2 * sin(a), sin(a) - cos(a)],
+            [2 * cos(a), 0, -2 * cos(a)],
+            [cos(a) - sin(a), -2 * sin(a), -1*(sin(a) + cos(a))]
+        ])
+        output.append(convolve(image, steerable_kernel))
     return output
-
-
-
 
 def main():
     # The main function
@@ -94,8 +131,14 @@ def main():
 
     # Q1
     patches = image_patches(img)
-    # TODO choose a few patches and save them
-    save_img(chosen_patches, "./image_patches/q1_patch.png")
+  
+    p1 = patches[260]
+    p2 = patches[528]
+    p3 = patches[0]
+
+    save_img(p1, "./image_patches/q1_p1_patch.png")
+    save_img(p2, "./image_patches/q1_p2_patch.png")
+    save_img(p3, "./image_patches/q1_p_3patch.png")
 
     # Q2: No code
 
@@ -106,9 +149,11 @@ def main():
     # Q1: No code
 
     # Q2
-
-    # TODO: Calculate the kernel described in the question.  There is tolerance for the kernel.
-    kernel_gaussian = None
+    kernel_gaussian = np.array([
+    [math.log(2)/(4*math.pi),math.log(2)/(2*math.pi),math.log(2)/(4*math.pi)],
+    [math.log(2)/(2*math.pi),math.log(2)/(math.pi),math.log(2)/(2*math.pi)],
+    [math.log(2)/(4*math.pi),math.log(2)/(2*math.pi),math.log(2)/(4*math.pi)]
+    ])
 
     filtered_gaussian = convolve(img, kernel_gaussian)
     save_img(filtered_gaussian, "./gaussian_filter/q2_gaussian.png")

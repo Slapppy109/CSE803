@@ -2,6 +2,7 @@ import os
 from common import read_img, save_img 
 import matplotlib.pyplot as plt
 import numpy as np 
+from filters import convolve
 
 def corner_score(image, u=5, v=5, window_size=(5,5)):
     # Given an input image, x_offset, y_offset, and window_size,
@@ -15,22 +16,23 @@ def corner_score(image, u=5, v=5, window_size=(5,5)):
     # Output- results: a image of size H x W
     # Use zero-padding to handle window values outside of the image. 
 
-    p = plt.imread(image)
-    h, w = p.shape
-    for i in range(h):
-        for j in range(w):
-            for wx in range(i - u, i + u):
-                for wy in range(j - v, j + v):
-
-    output = None # implement     
-
+    h, w = image.shape
+    # Get window radius
+    window_radius = window_size[0] // 2
+    # Find padding size
+    pad = window_radius + max(abs(v), abs(u))
+    # Pad image
+    padded = np.pad(image, pad, 'edge')
+    output = np.zeros(image.shape)
+    
+    #Traverse the image, ignoring the padded edges
+    for y in range(pad, h + pad):
+        for x in range(pad, w + pad):
+            # Grab window
+            window = padded[y - window_radius : y + window_radius, x - window_radius: x + window_radius]
+            offset_window = padded[y - window_radius + v : y + window_radius + v, x - window_radius + u : x + window_radius + u]
+            output[y - pad, x - pad] = ((offset_window - window) ** 2).sum()
     return output
-
-def roll_XY(img, x, y):
-    #roll image via x-axis
-    rolled = np.roll(img, x, axis = 1)
-    #return rolled image via y-axis
-    return np.roll(rolled, y, axis = 0)
 
 def harris_detector(image, window_size=(5,5)):
     # Given an input image, calculate the Harris Detector score for all pixels
@@ -41,15 +43,27 @@ def harris_detector(image, window_size=(5,5)):
     # to handle window values outside of the image. 
 
     ## compute the derivatives 
-    Ix = None
-    Iy = None 
+    Ix = np.array([
+        [1, 0, -1],
+        [2, 0, -2],
+        [1, 0, -1]
+    ])
+    Iy = np.array([
+        [1, 2, 1],
+        [0, 0, 0],
+        [-1, -2, -1]
+    ])
 
-    Ixx = None
-    Iyy = None
-    Ixy = None
+    Ixx = convolve(image, Ix)
+    Iyy = convolve(image, Iy)
+    Ixy = convolve(convolve(image, Ix),Iy)
+
+    alpha = 0.05
+    det = Ixx*Iyy -Ixy**2
+    trace = Ixx + Iyy
 
     # For each location of the image, construct the structure tensor and calculate the Harris response
-    response = None
+    response = det - alpha * trace
 
     return response
 

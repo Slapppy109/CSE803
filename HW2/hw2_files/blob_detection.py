@@ -1,6 +1,8 @@
 from common import * 
 import matplotlib.pyplot as plt
 import numpy as np 
+import math
+from filters import convolve
 
 def gaussian_filter(image, sigma):
     # Given an image, apply a Gaussian filter with the input kernel size
@@ -15,11 +17,15 @@ def gaussian_filter(image, sigma):
     # make sure that kernel size isn't too big and is odd 
     kernel_size = min(kernel_size, min(H,W)//2)     
     if kernel_size % 2 == 0: kernel_size = kernel_size + 1  
-
-    #TODO implement gaussian filtering with size kernel_size x kernel_size 
-    # feel free to use your implemented convolution function or a convolution function from a library 
-
-    return None 
+    #feel free to use your implemented convolution function or a convolution function from a library
+    kg = np.zeros([kernel_size, kernel_size])
+    dist_from_center = (kernel_size - 1) / 2
+    #Create Gaussian kernel
+    for y in range(kernel_size):
+        for x in range(kernel_size):
+            kg[y,x] = 1/(2*np.pi*sigma**2)*math.exp(-((y-dist_from_center)**2+(x-dist_from_center)**2)/(2*sigma**2))   
+    output = convolve(image, kg) 
+    return output
 
 def scale_space(image, min_sigma, k=np.sqrt(2), S=8):
     # Calcualtes a DoG scale space of the image
@@ -28,7 +34,12 @@ def scale_space(image, min_sigma, k=np.sqrt(2), S=8):
     #           k: scalar multiplier for scale space
     #           S: number of scales considers
     # Output-   Scale Space of size HxWx(S-1)
-    pass
+    output = np.zeros([image.shape[0],image.shape[1]])
+    for i in range(S-1,1,-1):
+        s1 = min_sigma * (k**i)
+        s2 = min_sigma * (k**(i-1))
+        output[:,:] = gaussian_filter(image, s2) - gaussian_filter(image, s1)
+    return output
 
 
 ##### You shouldn't need to edit the following 3 functions 
