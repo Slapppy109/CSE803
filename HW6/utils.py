@@ -38,8 +38,8 @@ def visualize_pcd(points):
     """
     Visualize the point cloud.
     """
-    pcd = open3d.PointCloud()
-    pcd.points = open3d.Vector3dVector(points)
+    pcd = open3d.geometry.PointCloud()
+    pcd.points = open3d.utility.Vector3dVector(points)
     # Uncommend this line if you want to paint some color
-    # pcd.paint_uniform_color([0, 0, 1])
-    open3d.draw_geometries([pcd])
+    pcd.paint_uniform_color([0, 0, 0])
+    open3d.visualization.draw_geometries([pcd])
